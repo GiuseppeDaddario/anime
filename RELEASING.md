@@ -34,7 +34,9 @@ No client release is published before those checks pass. Each archive contains
 only `anime`; the formula installs mpv. Users then run:
 
 ```sh
-brew install GiuseppeDaddario/tap/anime
+brew tap GiuseppeDaddario/tap
+brew trust GiuseppeDaddario/tap   # Homebrew 7+ requires trusting third-party taps
+brew install anime
 anime
 ```
 

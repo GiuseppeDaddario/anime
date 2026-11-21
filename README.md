@@ -6,10 +6,12 @@ on `/v1/*` next to its webhook.
 
 ## Install and sign in
 
-After the first release is published:
+Install:
 
 ```sh
-brew install GiuseppeDaddario/tap/anime
+brew tap GiuseppeDaddario/tap
+brew trust GiuseppeDaddario/tap   # Homebrew 7+ requires trusting third-party taps
+brew install anime
 anime
 ```
 
