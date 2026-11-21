@@ -208,17 +208,17 @@ func (m infoModel) Init() tea.Cmd {
 }
 
 func (m *infoModel) resize() {
-	width, height := m.width, max(4, m.height-11)
+	width, height := m.width, max(4, m.height-11-headerExtra())
 	if m.width >= 100 {
 		width = m.width / 2
 	} else {
-		height = max(4, m.height-20)
+		height = max(4, m.height-20-headerExtra())
 	}
 	for i := range m.lists {
 		m.lists[i].SetSize(width, height)
 	}
 	m.viewport.Width = max(20, m.width-4)
-	m.viewport.Height = max(4, m.height-12)
+	m.viewport.Height = max(4, m.height-13-headerExtra())
 }
 
 func (m *infoModel) rebuildLists() tea.Cmd {
@@ -286,6 +286,7 @@ func (m infoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, infoListCmd(msg.tab, cmd)
 	case tea.WindowSizeMsg:
 		m.width, m.height = max(25, msg.Width), max(15, msg.Height)
+		noteScreen(msg.Width, msg.Height)
 		m.resize()
 		m.updateDetail()
 	case infoEvent:
@@ -312,12 +313,12 @@ func (m infoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		key := msg.String()
 		if key == "ctrl+c" {
-			return m, tea.Quit
+			return m, screenDone
 		}
 		if m.detailKey != "" {
 			switch key {
 			case "q":
-				return m, tea.Quit
+				return m, screenDone
 			case "esc", "enter":
 				m.detailKey, m.raw = "", false
 				return m, nil
@@ -329,13 +330,13 @@ func (m infoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "p":
 				if record, ok := m.highlighted(); ok {
 					m.selected = &record
-					return m, tea.Quit
+					return m, screenDone
 				}
 			}
 		} else if m.lists[m.tab].FilterState() != list.Filtering {
 			switch key {
 			case "q", "esc":
-				return m, tea.Quit
+				return m, screenDone
 			case "tab", "shift+tab", "1", "2":
 				m.tab = 1 - m.tab
 				if key == "1" {
@@ -354,7 +355,7 @@ func (m infoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "p":
 				if record, ok := m.highlighted(); ok {
 					m.selected = &record
-					return m, tea.Quit
+					return m, screenDone
 				}
 			case " ":
 				if record, ok := m.highlighted(); ok && record.Cover != "" {

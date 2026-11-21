@@ -107,7 +107,17 @@ func apiJSON(ctx context.Context, method, path string, payload any, authenticate
 	return json.NewDecoder(io.LimitReader(response.Body, 16*1024*1024)).Decode(target)
 }
 
-func remotePlay(ctx context.Context, title, language, episode string) error {
+type playResult struct {
+	URL          string `json:"url"`
+	Title        string `json:"title"`
+	Episode      int    `json:"episode"`
+	Rewound      bool   `json:"rewound"`
+	MalID        int    `json:"mal_id"`
+	IntroEpisode int    `json:"intro_episode"`
+}
+
+// requestPlay asks the service which episode to play (or rewinds progress).
+func requestPlay(ctx context.Context, title, language, episode string) (playResult, error) {
 	payload := map[string]any{}
 	if title != "" {
 		payload["title"] = title
@@ -115,38 +125,51 @@ func remotePlay(ctx context.Context, title, language, episode string) error {
 	if language != "" {
 		payload["language"] = language
 	}
+	var result playResult
 	if episode != "" {
 		n, err := strconv.Atoi(episode)
 		if err != nil {
-			return err
+			return result, err
 		}
 		payload["episode"] = n
 	}
-	var result struct {
-		URL          string `json:"url"`
-		Title        string `json:"title"`
-		Episode      int    `json:"episode"`
-		Rewound      bool   `json:"rewound"`
-		MalID        int    `json:"mal_id"`
-		IntroEpisode int    `json:"intro_episode"`
-	}
 	if err := apiJSON(ctx, http.MethodPost, "/v1/rpc/play", payload, true, &result); err != nil {
-		return err
+		return result, err
 	}
 	if result.Rewound {
-		fmt.Printf("%s: progress set to episode %d\n", result.Title, result.Episode)
-		return nil
+		return result, nil
 	}
 	parsed, err := url.Parse(result.URL)
 	if err != nil || parsed.Host == "" || (parsed.Scheme != "https" && parsed.Scheme != "http") {
-		return fmt.Errorf("The service returned an invalid video URL")
+		return result, fmt.Errorf("The service returned an invalid video URL")
 	}
+	return result, nil
+}
+
+func (r playResult) mpvArgs() []string {
 	args := []string{}
-	if result.MalID > 0 {
-		args = append(args, "--script-opts-append=animewatcher-mal_id="+strconv.Itoa(result.MalID), "--script-opts-append=animewatcher-episode="+strconv.Itoa(result.IntroEpisode))
+	if r.MalID > 0 {
+		args = append(args, "--script-opts-append=animewatcher-mal_id="+strconv.Itoa(r.MalID), "--script-opts-append=animewatcher-episode="+strconv.Itoa(r.IntroEpisode))
+	}
+	return append(args, "--", r.URL)
+}
+
+func (r playResult) rewoundText() string {
+	return fmt.Sprintf("%s: progress set to episode %d", r.Title, r.Episode)
+}
+
+// remotePlay is the plain command-line flow (anime --continue / --ep).
+func remotePlay(ctx context.Context, title, language, episode string) error {
+	result, err := requestPlay(ctx, title, language, episode)
+	if err != nil {
+		return err
+	}
+	if result.Rewound {
+		fmt.Println(result.rewoundText())
+		return nil
 	}
 	fmt.Printf("Playing %s, episode %d\n", result.Title, result.Episode)
-	return runMPV(append(args, "--", result.URL)...)
+	return runMPV(result.mpvArgs()...)
 }
 
 func unauthorized(err error) bool {

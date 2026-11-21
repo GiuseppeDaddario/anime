@@ -14,7 +14,7 @@ func updateHome(m homeModel, msg tea.Msg) (homeModel, tea.Cmd) {
 func TestHomeOpensWithoutCredentialsAndRoutesToLinking(t *testing.T) {
 	isolatedUserConfig(t)
 	m := initHomeModel(nil)
-	for _, text := range []string{"ANIME", "Not linked", "Continue watching", "Link Telegram account", "anime --info"} {
+	for _, text := range []string{"Not linked", "Continue watching", "Link Telegram account", "anime --info"} {
 		if !strings.Contains(m.View(), text) {
 			t.Fatalf("Home missing %q", text)
 		}

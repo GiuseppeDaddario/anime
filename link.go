@@ -50,10 +50,10 @@ func (m linkModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "esc", "ctrl+c":
-			return m, tea.Quit
+			return m, screenDone
 		case "enter":
 			if m.linked {
-				return m, tea.Quit
+				return m, screenDone
 			}
 			if m.saving {
 				return m, nil
@@ -106,12 +106,6 @@ func (m linkModel) View() string {
 		return text + "Linking… · Esc Cancel\n"
 	}
 	return text + "Enter Link · Esc Back\n"
-}
-func linkTelegramAccount() error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	_, err := tea.NewProgram(newLinkModel(ctx), tea.WithAltScreen()).Run()
-	return err
 }
 func logoutAccount() error {
 	config, err := readUserConfig()

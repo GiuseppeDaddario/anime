@@ -46,75 +46,18 @@ func run(args []string) error {
 	if options.action == actionPlayer {
 		return runMPV(options.playerArgs...)
 	}
-	if options.action != actionHome {
-		return runAction(options)
+	if options.action == actionContinue {
+		// Plain command: print progress here and run mpv in this terminal.
+		return remotePlay(context.Background(), "", "", options.episode)
 	}
-	// Every completed/cancelled flow returns to the home menu.
-	var lastError error
-	for {
-		result, err := tea.NewProgram(initHomeModel(lastError), tea.WithAltScreen()).Run()
-		if err != nil {
-			return fmt.Errorf("home menu: %w", err)
-		}
-		home := result.(homeModel)
-		if home.action == actionHome {
-			return nil
-		}
-		lastError = runAction(cliOptions{action: home.action, verbose: options.verbose})
-	}
-}
-
-func runAction(options cliOptions) error {
-	if options.action == actionLink {
-		return linkTelegramAccount()
-	}
-	if options.action == actionLogout {
-		return logoutAccount()
-	}
-	play := func(title, language string) error {
-		return remotePlay(context.Background(), title, language, options.episode)
-	}
-	switch options.action {
-	case actionContinue:
-		return play("", "")
-	case actionAdd:
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		_, err := tea.NewProgram(initAddModel(ctx), tea.WithAltScreen()).Run()
+	// Everything else runs in one full-screen program until the user quits.
+	result, err := tea.NewProgram(newApp(options.action, options.episode), tea.WithAltScreen()).Run()
+	if err != nil {
 		return err
-	case actionInfo:
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		m := initInfoModel()
-		go readInfoStream(ctx, m.events)
-		result, err := tea.NewProgram(m, tea.WithAltScreen()).Run()
-		cancel()
-		for range m.events {
-		} // Wait until the background HTTP stream stops.
-		if err != nil {
-			return err
-		}
-		if info := result.(infoModel); info.selected != nil {
-			return play(info.selected.Title, info.selected.Language)
-		}
-		return nil
-	case actionBrowse:
-		fmt.Println("Caricamento catalogo... (Attendere)")
-		items, err := fetchAnimeList(context.Background())
-		if err != nil {
-			return err
-		}
-		if len(items) == 0 {
-			return fmt.Errorf("The catalogue is empty")
-		}
-		result, err := tea.NewProgram(initModel(items), tea.WithAltScreen()).Run()
-		if err != nil {
-			return err
-		}
-		if selected := result.(model).selected; selected != "" {
-			return play(selected, "sub")
-		}
-		return nil
 	}
-	return fmt.Errorf("unknown action")
+	app := result.(appModel)
+	if app.notice != "" {
+		fmt.Println(app.notice)
+	}
+	return app.err
 }

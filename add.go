@@ -108,7 +108,8 @@ func (m addModel) Init() tea.Cmd { return textinput.Blink }
 func (m addModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.list.SetSize(msg.Width, max(3, msg.Height-13))
+		noteScreen(msg.Width, msg.Height)
+		m.list.SetSize(msg.Width, max(3, msg.Height-14-headerExtra()))
 		m.input.Width = max(10, min(60, msg.Width-6))
 	case searchResultsMsg:
 		if m.state != addSearching {
@@ -146,13 +147,13 @@ func (m addModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		key := msg.String()
 		if key == "ctrl+c" {
-			return m, tea.Quit
+			return m, screenDone
 		}
 		switch m.state {
 		case addInput:
 			switch key {
 			case "esc":
-				return m, tea.Quit
+				return m, screenDone
 			case "enter":
 				query, language, err := parseAnimeSearch(m.input.Value())
 				m.err = err
@@ -167,7 +168,7 @@ func (m addModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.list.FilterState() != list.Filtering {
 				switch key {
 				case "q":
-					return m, tea.Quit
+					return m, screenDone
 				case "esc":
 					m.state, m.err = addInput, nil
 					return m, m.input.Focus()
@@ -187,7 +188,7 @@ func (m addModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case addDone:
 			if key == "enter" || key == "q" || key == "esc" {
-				return m, tea.Quit
+				return m, screenDone
 			}
 			if key == "n" {
 				m.state, m.err = addInput, nil
@@ -196,7 +197,7 @@ func (m addModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case addSearching, addSaving:
 			if key == "esc" {
-				return m, tea.Quit
+				return m, screenDone
 			}
 		}
 	}

@@ -52,10 +52,11 @@ func (m homeModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := message.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
+		noteScreen(msg.Width, msg.Height)
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q", "esc", "ctrl+c":
-			return m, tea.Quit
+			return m, screenDone
 		case "up", "k":
 			m.cursor = (m.cursor + len(homeEntries) - 1) % len(homeEntries)
 		case "down", "j", "tab":
@@ -65,7 +66,7 @@ func (m homeModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			if m.action != actionHome && m.action != actionLogout && m.userID == 0 {
 				m.action = actionLink
 			}
-			return m, tea.Quit
+			return m, screenDone
 		}
 	}
 	return m, nil
