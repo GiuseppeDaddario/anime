@@ -1,0 +1,10 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+bin/
+dist/
+.env
+.env.*
+*.secret
+*certificate*.json
+*service-account*.json
